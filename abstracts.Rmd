@@ -1,23 +1,33 @@
 ---
 title: "Book-of-Abstracts-Generator"
 output: html_document
-date: "Version 0.1 (2015-08-25)"
+date: "Version 0.2 (2015-09-14)"
 runtime: shiny
 subtitle: "High quality publications for scientific conferences"
 resource_files:
 - example.csv
 - example.jpg
+- output.jpg
+- logo.jpg
 ---
 
 
-![example](example.jpg)
+![example](output.jpg)
 
 This site offers downloading a *book of abstracts* -- either as standalone document (PDF file) or in plain text (TEX file) if further processing is needed. You can **provide your own content** by uploading these files:
 
-1. A table containing the data of each contribution (in **CSV** format). 
-2. a cover image (in **JPG** format). 
-  
-For the sake of demonstration, these example [CSV](https://www.dropbox.com/s/rrpa4gf5v6hp9fs/example.csv?dl=1) and [JPG](https://www.dropbox.com/s/kmuuqro6trk3qal/example.jpg?dl=1) files can be used.    
+1. A table containing the data of each contribution (in **CSV** format)  
+2. A cover image (in **JPG** format)  
+3. A logo (in **JPG** format)  
+
+Example files below can be used for the sake of demonstration:  
+
+- [example.csv](https://www.dropbox.com/s/rrpa4gf5v6hp9fs/example.csv?dl=1)     
+- [example.jpg](https://www.dropbox.com/s/kmuuqro6trk3qal/example.jpg?dl=1)      
+- [logo.jpg](https://www.dropbox.com/s/217hjlil10iexiz/logo.jpg?dl=1)     
+
+More features will be added soon, e.g. for adding informations on the conference venue or for specifying different panels and types of contribution (oral or poster).
+
 
 ```{r, echo=FALSE, error=FALSE}
 shinyApp(shinyUI(
@@ -27,13 +37,17 @@ shinyApp(shinyUI(
       column(3,  
              h4("Upload Files"),
              fileInput("abstracts_csv", label = "CSV (contributors data)"),
-             fileInput("background_img", label = "JPG (cover image)")),
+             fileInput("background_img", label = "JPG (cover image)"),
+             fileInput("organizer_img", label = "JPG (organizer logo)")),
       column(4,
              h4("Enter Text"),
              textInput("confTitle", label = "Conference Title", value = "Example Conference"),
-             textInput("confLocation", label = "Conference Location", value = "Berlin"),
-             dateInput("confDate1", label = "Start Date", value = Sys.Date()+14, min = Sys.Date(), max = Sys.Date()+365*10),
-             dateInput("confDateX", label = "End Date", value = Sys.Date()+19, min = Sys.Date(), max = Sys.Date()+365*10)
+             textInput("confLocation", label = "Conference Location", value = "Tiefseestudios"),    textInput("confCity", label = "Conference City", value = "Berlin"), 
+                    textInput("confLocale", label = "Locale (date format)", 
+value="en_GB.UTF-8")
+             # ,
+             # dateInput("confDate1", label = "Start Date", value = Sys.Date()+14, min = Sys.Date(), max = Sys.Date()+365*10),
+             # dateInput("confDateX", label = "End Date", value = Sys.Date()+19, min = Sys.Date(), max = Sys.Date()+365*10)
       ),
       column(4,
              h4("Download Book"),             
@@ -66,7 +80,6 @@ shinyApp(shinyUI(
   )
 ), shinyServer(function(input, output){
   library(tools)   
-  
 
 get_initials <- function(nameVector=NULL){
   return(lapply(lapply(lapply(lapply(lapply(paste(nameVector), strsplit, " "), unlist), substr, 1, 1), unlist), paste, collapse=""))
@@ -88,14 +101,20 @@ tex_head <-function(input=list(confTitle = "Example Conference",
                     titleVar = "title",
                     abstractVar= "abstract"),
                                  toc = TRUE){
+  Sys.setlocale("LC_TIME", input$confLocale)
 return(paste0("\\documentclass[a4]{article}\n \\usepackage{graphicx}\n \\begin{document}\n \\begin{center}\n \\Huge{",   input$confTitle, "}\\vspace{8mm}\\\\\n \\includegraphics[width= 1.0\\textwidth]{",
-  input$background_img$name, "}\\vspace{10mm}\\\\\n \\large{",  paste0(format(input$confDate1, "%a"), ", ",
-  format(input$confDate1, "%b %d")),"\\hspace{0.1cm}--\\hspace{0.1cm}", paste0(format(input$confDateX, "%a"), ", ",
-  format(input$confDateX, "%b %d"), " ",format(input$confDateX, "%Y")),"\\\\\n held in ", 
-  input$confLocation, "}\\\\\n \\end{center}\n \\pagestyle{empty}\n \\newpage\n",
+  input$background_img$name, "}\\vspace{10mm}\\\\\n \\large{",  paste0(
+    format(min(as.Date(read.csv(input$abstracts_csv$datapath, sep=",", header=TRUE)[,input$dateVar])), "%B "), as.numeric(paste(format(min(as.Date(read.csv(input$abstracts_csv$datapath, sep=",", header=TRUE)[,input$dateVar])), "%d"))),
+    "\\hspace{0.1cm}--\\hspace{0.1cm}",
+    ifelse(format(min(as.Date(read.csv(input$abstracts_csv$datapath, sep=",", header=TRUE)[,input$dateVar])), "%B")==format(max(as.Date(read.csv(input$abstracts_csv$datapath, sep=",", header=TRUE)[,input$dateVar])), "%B"), 
+            as.numeric(paste(format(max(as.Date(read.csv(input$abstracts_csv$datapath, sep=",", header=TRUE)[,input$dateVar])), "%d"))), 
+             paste(format(max(as.Date(read.csv(input$abstracts_csv$datapath, sep=",", header=TRUE)[,input$dateVar])), "%B "),  as.numeric(paste(format(min(as.Date(read.csv(input$abstracts_csv$datapath, sep=",", header=TRUE)[,input$dateVar])), "%d"))))), ", ",format(max(as.Date(read.csv(input$abstracts_csv$datapath, sep=",", header=TRUE)[,input$dateVar])), "%Y")),"\\\\\n ", 
+  input$confLocation," (", 
+  input$confCity, ")}\\vspace{8mm}\\\\\n \\includegraphics[width= .2\\textwidth]{",
+  input$organizer_img$name, "}\\\\\n \\end{center}\n \\pagestyle{empty}\n \\newpage\n",
   ifelse(toc==TRUE, paste("\\begin{center}\n \\LARGE{\\textsc{Contributors}}\\vspace{8mm}\\\\\n  \\end{center}\n \\begin{tabular*}{\\textwidth}{l @{\\extracolsep{\\fill}} r}\n",  paste0(rep("\\textsc{", length(read.csv(input$abstracts_csv$datapath, sep=",", header=TRUE)[,1])), 
-lapply(read.csv(input$abstracts_csv$datapath, sep=",", header=TRUE)[, input$surNameVar], paste), ", ", get_initials(read.csv(input$abstracts_csv$datapath, sep=",", header=TRUE)[,input$givenNameVar]), "}&", lapply(lapply(strsplit(paste(read.csv(input$abstracts_csv$datapath, sep=",", header=TRUE)[,input$titleVar]), " "), "[", 1:8), paste, collapse = " "),"\\hspace{6mm} ",  1:nrow(read.csv(input$abstracts_csv$datapath, sep=",", header=TRUE)), "\\\\\n", collapse=""), " \\end{tabular*}", collapse=""), " "), 
-  "\\newpage\n \\pagestyle{headings}\n",collapse= ""))
+lapply(read.csv(input$abstracts_csv$datapath, sep=",", header=TRUE)[, input$surNameVar], paste), ", ", get_initials(read.csv(input$abstracts_csv$datapath, sep=",", header=TRUE)[,input$givenNameVar]), "}&", lapply(lapply(strsplit(paste(read.csv(input$abstracts_csv$datapath, sep=",", header=TRUE)[,input$titleVar]), " "), "[", 1:5), paste, collapse = " "),"\\hspace{6mm} ",  1:nrow(read.csv(input$abstracts_csv$datapath, sep=",", header=TRUE)), "\\\\\n", collapse=""), " \\end{tabular*}", collapse=""), " "), 
+  "\\newpage\n \\newcounter{new}\n \\pagestyle{headings}\n",collapse= ""))
 }
 
 
@@ -108,20 +127,19 @@ tex_body <-function(input = list(abstracts_csv = list(datapath= "example.csv"),
                     authorDepartVar = "authorDepart", 
                     titleVar = "title",
                     abstractVar= "abstract")){
+  Sys.setlocale("LC_TIME", input$confLocale)
   return(paste(unlist(
-  mapply("paste0", 
-         rep("\\section[\\textsc{",  nrow(read.csv(input$abstracts_csv$datapath, sep=",", header=TRUE))), 
-         lapply(read.csv(input$abstracts_csv$datapath, sep=",", header=TRUE)[, input$surNameVar], paste), ", ", lapply(
-           lapply(read.csv(input$abstracts_csv$datapath, sep=",", header=TRUE)[, input$givenNameVar], paste), 
-           substr, 1, 1), ".}]{", 
+  mapply("paste0",    
+         rep("\\section",  nrow(read.csv(input$abstracts_csv$datapath, sep=",", header=TRUE))), "*{", 
          lapply(read.csv(input$abstracts_csv$datapath, sep=",", header=TRUE)[, input$titleVar], paste),
-         "} \n 
-         \\textit{", 
-         lapply(read.csv(input$abstracts_csv$datapath, sep=",", header=TRUE)[, input$dateVar], paste), ", ", 
-         lapply(read.csv(input$abstracts_csv$datapath, sep=",", header=TRUE)[, input$timeStartVar], paste), "--",
-         lapply(read.csv(input$abstracts_csv$datapath, sep=",", header=TRUE)[, input$timeStopVar], paste),", Room ",
-         lapply(read.csv(input$abstracts_csv$datapath, sep=",", header=TRUE)[, input$roomVar], paste),"}\\\\\n \\begin{tabular}{lr}\\\\ 
-         \\textsc{",
+         "} \n", rep("\\markright{\\textsc{",  nrow(read.csv(input$abstracts_csv$datapath, sep=",", header=TRUE))), 
+         lapply(read.csv(input$abstracts_csv$datapath, sep=",", header=TRUE)[, input$surNameVar], paste), ", ", lapply(
+  lapply(read.csv(input$abstracts_csv$datapath, sep=",", header=TRUE)[, input$givenNameVar], paste), 
+  substr, 1, 1), ".}\\hfill\n",
+         lapply(read.csv(input$abstracts_csv$datapath, sep=",", header=TRUE)[, input$dateVar], paste0), "\\hspace{1.4cm} ", 
+         lapply(read.csv(input$abstracts_csv$datapath, sep=",", header=TRUE)[, input$timeStartVar], paste0), " -- ",
+         lapply(read.csv(input$abstracts_csv$datapath, sep=",", header=TRUE)[, input$timeStopVar], paste0),", Room ",
+         lapply(read.csv(input$abstracts_csv$datapath, sep=",", header=TRUE)[, input$roomVar], paste),"\\\\\n}\n \\thispagestyle{myheadings}\n \\pagenumbering{gobble}\n \\begin{tabular}{lr}\\\\\n \\textsc{",
          lapply(read.csv(input$abstracts_csv$datapath, sep=",", header=TRUE)[, input$givenNameVar], paste), " ", 
          lapply(read.csv(input$abstracts_csv$datapath, sep=",", header=TRUE)[, input$surNameVar], paste), "}&\\textit{",
          lapply(read.csv(input$abstracts_csv$datapath, sep=",", header=TRUE)[, input$authorDepartVar], paste),  "}\\\\\n \\texttt{", 
@@ -130,7 +148,7 @@ tex_body <-function(input = list(abstracts_csv = list(datapath= "example.csv"),
          lapply(read.csv(input$abstracts_csv$datapath, sep=",", header=TRUE)[, input$authorInstVar], paste),"}\\\\\n & \\textit{",
          lapply(read.csv(input$abstracts_csv$datapath, sep=",", header=TRUE)[, input$authorCityVar], paste),  "}\\\\\n
          \\end{tabular} \\vspace{0.5cm}\\\\\n \\textbf{Abstract: }",
-         lapply(read.csv(input$abstracts_csv$datapath, sep=",", header=TRUE)[, input$abstractVar], paste), "\\clearpage\n")
+         lapply(read.csv(input$abstracts_csv$datapath, sep=",", header=TRUE)[, input$abstractVar], paste), "\n   \\addtocounter{new}{1}\n \\vfill\n \\begin{center}\n -- \\thenew{} --\\\\\n \\end{center} \\clearpage\n")
 ), collapse=""))}
 
 tex_foot <- "\\end{document}\n"
@@ -146,6 +164,7 @@ output$downloadTex <- downloadHandler(
   # This function should write data to a file given to it by
   # the rgument 'file'.
   content = function(file) { 
+  Sys.setlocale("LC_TIME", input$confLocale)
     owd <- setwd(tempdir())
     on.exit(setwd(owd))
     cat(tex_head(input), tex_body(input), tex_foot, file= "tmp.tex")
@@ -159,9 +178,11 @@ output$downloadTex <- downloadHandler(
   # temporarily switch to the temp dir, in case you do not have write
   # permission to the current working directory
    content = function(file) {
+  Sys.setlocale("LC_TIME", input$confLocale)
     owd <- setwd(tempdir())  
     on.exit(setwd(owd))
     file.copy(input$background_img$datapath, input$background_img$name)
+    file.copy(input$organizer_img$datapath, input$organizer_img$name)
       cat(tex_head(input), tex_body(input), tex_foot, file= "tmp.tex")
   texi2pdf("tmp.tex")  
     file.rename("tmp.pdf", file)
