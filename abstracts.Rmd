@@ -75,7 +75,9 @@ value="en_GB.UTF-8")
              textInput("titleVar", label = "Title of contribution", value = "title"),
              textInput("abstractVar", label = "Abstract of Contribution", value = "abstract"),
              textInput("timeStartVar", label = "Start Time of Contribution", value = "timeStart"),
-             textInput("timeStopVar", label = "Stop Time of Contribution", value = "timeStop")
+             textInput("timeStopVar", label = "Stop Time of Contribution", value = "timeStop"),
+             textInput("panelVar", label = "Panel title", value = "panel"),
+             textInput("conTypeVar", label = "Contribution type", value = "conType")
       )
     ),
     br(),
@@ -106,7 +108,7 @@ tex_head <-function(input=list(confTitle = "Example Conference",
                     abstractVar= "abstract"),
                                  toc = TRUE){
   Sys.setlocale("LC_TIME", input$confLocale)
-return(paste0("\\documentclass[a4]{article}\n \\usepackage{graphicx}\n \\begin{document}\n \\begin{center}\n \\Huge{",   input$confTitle, "}\\vspace{8mm}\\\\\n \\includegraphics[width= 1.0\\textwidth]{",
+return(paste0("\\documentclass[a4]{article}\n \\usepackage{graphicx}\n\\begin{document}\n \\begin{center}\n \\Huge{",   input$confTitle, "}\\vspace{8mm}\\\\\n \\includegraphics[width= 1.0\\textwidth]{",
   input$background_img$name, "}\\vspace{10mm}\\\\\n \\large{",  paste0(
     format(min(as.Date(read.csv(input$abstracts_csv$datapath, sep=",", header=TRUE)[,input$dateVar])), "%B "), as.numeric(paste(format(min(as.Date(read.csv(input$abstracts_csv$datapath, sep=",", header=TRUE)[,input$dateVar])), "%d"))),
     "\\hspace{0.1cm}--\\hspace{0.1cm}",
@@ -133,26 +135,28 @@ tex_body <-function(input = list(abstracts_csv = list(datapath= "example.csv"),
                     abstractVar= "abstract")){
   Sys.setlocale("LC_TIME", input$confLocale)
   return(paste(unlist(
-  mapply("paste0",    
-         rep("\\section",  nrow(read.csv(input$abstracts_csv$datapath, sep=",", header=TRUE))), "*{", 
+  mapply("paste0",
+rep("\\section",  nrow(read.csv(input$abstracts_csv$datapath, sep=",", header=TRUE))), "*{", 
          lapply(read.csv(input$abstracts_csv$datapath, sep=",", header=TRUE)[, input$titleVar], paste),
-         "} \n", rep("\\markright{\\textsc{",  nrow(read.csv(input$abstracts_csv$datapath, sep=",", header=TRUE))), 
+         "} \n", rep("\\markright{\\footnotesize \\textsc{",  nrow(read.csv(input$abstracts_csv$datapath, sep=",", header=TRUE))), 
          lapply(read.csv(input$abstracts_csv$datapath, sep=",", header=TRUE)[, input$surNameVar], paste), ", ", lapply(
   lapply(read.csv(input$abstracts_csv$datapath, sep=",", header=TRUE)[, input$givenNameVar], paste), 
-  substr, 1, 1), ".}\\hfill\n",
-         lapply(read.csv(input$abstracts_csv$datapath, sep=",", header=TRUE)[, input$dateVar], paste0), "\\hspace{1.4cm} ", 
-         lapply(read.csv(input$abstracts_csv$datapath, sep=",", header=TRUE)[, input$timeStartVar], paste0), " -- ",
-         lapply(read.csv(input$abstracts_csv$datapath, sep=",", header=TRUE)[, input$timeStopVar], paste0),", Room ",
-         lapply(read.csv(input$abstracts_csv$datapath, sep=",", header=TRUE)[, input$roomVar], paste),"\\\\\n}\n \\thispagestyle{myheadings}\n \\pagenumbering{gobble}\n \\begin{tabular}{lr}\\\\\n \\textsc{",
+  substr, 1, 1), ".}\\hspace{2cm} \\tiny{}",lapply(read.csv(input$abstracts_csv$datapath, sep=",", header=TRUE)[, input$conTypeVar], paste0), " on ",
+  lapply(read.csv(input$abstracts_csv$datapath, sep=",", header=TRUE)[, input$dateVar], paste0), " from ",
+         lapply(read.csv(input$abstracts_csv$datapath, sep=",", header=TRUE)[, input$timeStartVar], paste0), " to ",
+         lapply(read.csv(input$abstracts_csv$datapath, sep=",", header=TRUE)[, input$timeStopVar], paste0), " in Room ",
+         lapply(read.csv(input$abstracts_csv$datapath, sep=",", header=TRUE)[, input$roomVar], paste0), "\\footnotesize{}\\hfill{}\n",
+        lapply(read.csv(input$abstracts_csv$datapath, sep=",", header=TRUE)[, input$panelVar], paste), "}\n\\normalsize \\thispagestyle{myheadings}\n \\pagenumbering{gobble}\n",
+  "\\begin{minipage}[t]{0.33 \\textwidth}\n \\textsc{",
          lapply(read.csv(input$abstracts_csv$datapath, sep=",", header=TRUE)[, input$givenNameVar], paste), " ", 
-         lapply(read.csv(input$abstracts_csv$datapath, sep=",", header=TRUE)[, input$surNameVar], paste), "}&\\textit{",
-         lapply(read.csv(input$abstracts_csv$datapath, sep=",", header=TRUE)[, input$authorDepartVar], paste),  "}\\\\\n \\texttt{", 
-          lapply(read.csv(input$abstracts_csv$datapath, sep=",", header=TRUE)[, input$emailVar], paste),
-         "}& \\textit{",
-         lapply(read.csv(input$abstracts_csv$datapath, sep=",", header=TRUE)[, input$authorInstVar], paste),"}\\\\\n & \\textit{",
-         lapply(read.csv(input$abstracts_csv$datapath, sep=",", header=TRUE)[, input$authorCityVar], paste),  "}\\\\\n
-         \\end{tabular} \\vspace{0.5cm}\\\\\n \\textbf{Abstract: }",
-         lapply(read.csv(input$abstracts_csv$datapath, sep=",", header=TRUE)[, input$abstractVar], paste), "\n   \\addtocounter{new}{1}\n \\vfill\n \\begin{center}\n -- \\thenew{} --\\\\\n \\end{center} \\clearpage\n")
+         lapply(read.csv(input$abstracts_csv$datapath, sep=",", header=TRUE)[, input$surNameVar], paste), "}\\\\\n\\texttt{", 
+          lapply(read.csv(input$abstracts_csv$datapath, sep=",", header=TRUE)[, input$emailVar], paste),"}\\end{minipage}\n\\begin{minipage}[t]{0.67  \\textwidth}\n\\begin{flushright}\n\\textit{",
+         lapply(read.csv(input$abstracts_csv$datapath, sep=",", header=TRUE)[, input$authorDepartVar], paste),  "}\\\\\n\\textit{",
+         lapply(read.csv(input$abstracts_csv$datapath, sep=",", header=TRUE)[, input$authorInstVar], paste),"}\\\\\n\\textit{",
+         lapply(read.csv(input$abstracts_csv$datapath, sep=",", header=TRUE)[, input$authorCityVar], paste),  "}\\\\\n\\end{flushright}\n
+         \\end{minipage} \\vspace{0.5cm}\\\\\n \\textbf{Abstract: }",
+         lapply(read.csv(input$abstracts_csv$datapath, sep=",", header=TRUE)[, input$abstractVar], paste), "\n   \\addtocounter{new}{1}\n \\vfill\n
+\\begin{center}\n \\thenew{}\\\\\n \\end{center}\n\\clearpage\n")
 ), collapse=""))}
 
 tex_foot <- "\\end{document}\n"
@@ -163,17 +167,16 @@ output$downloadTex <- downloadHandler(
   # This function returns a string which tells the client
   # browser what name to use when saving the file.
   filename = function() {
-    file <- paste0("book_", tolower(strsplit(paste(input$confTitle), " ")[[1]]), ".tex")
+    my_file <- paste0("book_", tolower(strsplit(paste(input$confTitle), " ")[[1]]), ".tex")
   },
   # This function should write data to a file given to it by
   # the rgument 'file'.
-  content = function(file) { 
+ content = function(my_file) {
   Sys.setlocale("LC_TIME", input$confLocale)
-    owd <- setwd(tempdir())
+    owd <- setwd(tempdir())  
     on.exit(setwd(owd))
-    cat(tex_head(input), tex_body(input), tex_foot, file= "tmp.tex")
-    file.rename("tmp.tex", file)
-    })
+      cat(tex_head(input), tex_body(input), tex_foot, file= paste(my_file))
+ })
 
   output$downloadPdf <- downloadHandler(
     filename = function() {
