@@ -87,6 +87,25 @@ value="en_GB.UTF-8")
 ), shinyServer(function(input, output){
   library(tools)   
 
+  formatDate <- function(evdat){
+  if(!is.numeric.Date(evdat)){evdat <- as.Date(paste(evdat))}
+  return(paste0(format(evdat, "%a"), ", the ", 
+  as.numeric(format(evdat, "%d")), 
+  ifelse(as.numeric(format(evdat, "%d")) == 1, "st", 
+         ifelse(as.numeric(format(evdat, "%d")) == 2, "nd", 
+                ifelse(as.numeric(format(evdat, "%d")) == 3, "rd",
+                       "th"))), " ", format(evdat, "%b"), " ", format(evdat, "%Y")))
+}
+
+formatTime <- function(t_start, t_stop=NULL){
+  return(paste0(paste(as.numeric(strsplit(t_start, split = ":")[[1]]))[[1]], ":", 
+  ifelse(as.numeric(strsplit(t_start, split = ":")[[1]])[[2]]<10, "0", ""),
+as.numeric(strsplit(t_start, split = ":")[[1]])[[2]], ifelse(!is.null(t_stop), 
+paste0("--", paste(as.numeric(strsplit(t_stop, split = ":")[[1]]))[[1]], ":", 
+ifelse(as.numeric(strsplit(t_stop, split = ":")[[1]])[[2]]<10, "0", ""),
+as.numeric(strsplit(t_stop, split = ":")[[1]])[[2]]), "")))
+}
+
 get_initials <- function(nameVector=NULL){
   return(lapply(lapply(lapply(lapply(lapply(paste(nameVector), strsplit, " "), unlist), substr, 1, 1), unlist), paste, collapse=""))
 }
@@ -108,7 +127,7 @@ tex_head <-function(input=list(confTitle = "Example Conference",
                     abstractVar= "abstract"),
                                  toc = TRUE){
   Sys.setlocale("LC_TIME", input$confLocale)
-return(paste0("\\documentclass[a4]{article}\n \\usepackage{graphicx}\n\\begin{document}\n \\begin{center}\n \\Huge{",   input$confTitle, "}\\vspace{8mm}\\\\\n \\includegraphics[width= 1.0\\textwidth]{",
+return(paste0("\\documentclass[a4]{article}\n \\usepackage{graphicx}\n\\usepackage{hyperref}\n\\begin{document}\n \\begin{center}\n \\Huge{",   input$confTitle, "}\\vspace{8mm}\\\\\n \\includegraphics[width= 1.0\\textwidth]{",
   input$background_img$name, "}\\vspace{10mm}\\\\\n \\large{",  paste0(
     format(min(as.Date(read.csv(input$abstracts_csv$datapath, sep=",", header=TRUE)[,input$dateVar])), "%B "), as.numeric(paste(format(min(as.Date(read.csv(input$abstracts_csv$datapath, sep=",", header=TRUE)[,input$dateVar])), "%d"))),
     "\\hspace{0.1cm}--\\hspace{0.1cm}",
@@ -141,16 +160,19 @@ rep("\\section",  nrow(read.csv(input$abstracts_csv$datapath, sep=",", header=TR
          "} \n", rep("\\markright{\\footnotesize \\textsc{",  nrow(read.csv(input$abstracts_csv$datapath, sep=",", header=TRUE))), 
          lapply(read.csv(input$abstracts_csv$datapath, sep=",", header=TRUE)[, input$surNameVar], paste), ", ", lapply(
   lapply(read.csv(input$abstracts_csv$datapath, sep=",", header=TRUE)[, input$givenNameVar], paste), 
-  substr, 1, 1), ".}\\hspace{2cm} \\tiny{}",lapply(read.csv(input$abstracts_csv$datapath, sep=",", header=TRUE)[, input$conTypeVar], paste0), " on ",
-  lapply(read.csv(input$abstracts_csv$datapath, sep=",", header=TRUE)[, input$dateVar], paste0), " from ",
-         lapply(read.csv(input$abstracts_csv$datapath, sep=",", header=TRUE)[, input$timeStartVar], paste0), " to ",
-         lapply(read.csv(input$abstracts_csv$datapath, sep=",", header=TRUE)[, input$timeStopVar], paste0), " in Room ",
-         lapply(read.csv(input$abstracts_csv$datapath, sep=",", header=TRUE)[, input$roomVar], paste0), "\\footnotesize{}\\hfill{}\n",
+  substr, 1, 1), ".}\\hspace{2cm} \\tiny{}\\textbf{",lapply(read.csv(input$abstracts_csv$datapath, sep=",", header=TRUE)[, input$conTypeVar], paste0), "} | ",
+   lapply(lapply(read.csv(input$abstracts_csv$datapath, sep=",", header=TRUE)[, input$dateVar], paste), formatDate), " (",  
+         mapply("formatTime", lapply(read.csv(input$abstracts_csv$datapath, sep=",", header=TRUE)[, input$timeStartVar], paste),
+ lapply(read.csv(input$abstracts_csv$datapath, sep=",", header=TRUE)[, input$timeStopVar], paste)),
+") | \\textbf{Room ",
+         lapply(read.csv(input$abstracts_csv$datapath, sep=",", header=TRUE)[, input$roomVar], paste0), "}\\footnotesize{}\\hfill{}\n",
         lapply(read.csv(input$abstracts_csv$datapath, sep=",", header=TRUE)[, input$panelVar], paste), "}\n\\normalsize \\thispagestyle{myheadings}\n \\pagenumbering{gobble}\n",
   "\\begin{minipage}[t]{0.33 \\textwidth}\n \\textsc{",
          lapply(read.csv(input$abstracts_csv$datapath, sep=",", header=TRUE)[, input$givenNameVar], paste), " ", 
-         lapply(read.csv(input$abstracts_csv$datapath, sep=",", header=TRUE)[, input$surNameVar], paste), "}\\\\\n\\texttt{", 
-          lapply(read.csv(input$abstracts_csv$datapath, sep=",", header=TRUE)[, input$emailVar], paste),"}\\end{minipage}\n\\begin{minipage}[t]{0.67  \\textwidth}\n\\begin{flushright}\n\\textit{",
+         lapply(read.csv(input$abstracts_csv$datapath, sep=",", header=TRUE)[, input$surNameVar], paste), "}\\\\\n\\href{mailto:", 
+ lapply(read.csv(input$abstracts_csv$datapath, sep=",", header=TRUE)[, input$emailVar], paste),
+"}{\\texttt{", 
+          lapply(read.csv(input$abstracts_csv$datapath, sep=",", header=TRUE)[, input$emailVar], paste),"}}\\end{minipage}\n\\begin{minipage}[t]{0.67  \\textwidth}\n\\begin{flushright}\n\\textit{",
          lapply(read.csv(input$abstracts_csv$datapath, sep=",", header=TRUE)[, input$authorDepartVar], paste),  "}\\\\\n\\textit{",
          lapply(read.csv(input$abstracts_csv$datapath, sep=",", header=TRUE)[, input$authorInstVar], paste),"}\\\\\n\\textit{",
          lapply(read.csv(input$abstracts_csv$datapath, sep=",", header=TRUE)[, input$authorCityVar], paste),  "}\\\\\n\\end{flushright}\n
